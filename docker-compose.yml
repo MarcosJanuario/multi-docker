@@ -1,0 +1,42 @@
+version: '3'
+services: #os servicos/servidores que irao rodar na contrucao da nossa imagem
+  postgress:
+    image: 'postgres:latest' #para server postgree copiamos(a build) a imagem do docker mesmo
+  redis:
+    image: 'redis:latest' #para server redis copiamos(a build) a imagem do docker mesmo
+  nginx:
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - '3050:80'
+  api:
+    build:
+      dockerfile: Dockerfile.dev # necessario SE o dockerfile em questao for diferente de "Dockerfile"
+      context: ./server #passamos em qual diretorio se encontra a Dockerfile em questao
+    volumes:  #usado para watch os folders para atualizar a imagem sem que tenhamos que fazer uma build
+      - /app/node_modules # dizemos para a pasta node_modules nao ser overwritten
+      - ./server:/app #tudo na pasta server(local) deve ser shared com a pasta app(container)
+    environment: #environments variveis que serao usados nos arquiso key.js nessa imagem
+      - REDIS_HOST=redis #ao inves de colocar um IP, simplesmente colocamos o nome do servico(redis) configurado nesse mesmo file
+      - REDIS_PORT=6379
+      - PGUSER=postgres
+      - PGHOST=postgres #o nome do nosso service aqui nessa imagem
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432
+  client:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app #tudo na pasta client(local) deve ser shared com a pasta app(container)
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
